@@ -84,6 +84,12 @@ export class SoundEngine {
     this.tone(1318, 0.16, 'sine', 0.18, 0.08);
   }
 
+  // A thrown coin landing: two bright metallic ticks.
+  clink() {
+    this.tone(2093, 0.07, 'triangle', 0.16);
+    this.tone(1568, 0.12, 'triangle', 0.12, 0.07);
+  }
+
   win() {
     [523, 659, 784, 1046].forEach((f, i) => this.tone(f, 0.22, 'triangle', 0.2, i * 0.13));
   }

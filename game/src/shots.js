@@ -13,60 +13,91 @@ function guardByName(game, name) {
 }
 
 export function stageShot(game, name) {
-  const level = game.level;
-  // Reset to a clean mid-game state first.
-  level.ledgers.forEach((l) => { l.taken = false; });
-  game.guards.forEach((g) => { g.suspicion = 0; g.state = 'patrol'; });
-  game.particles.length = 0;
   game.alerts = 0;
-  game.state = 'playing';
-  game.frozen = true;
   game.time = 42.5; // fixed clock so every render of a scene matches
 
   if (name === 'overview') {
-    // Cover: the whole archive at a glance — player mid-level, two pages in hand,
-    // cones sweeping, exit still locked.
+    // Cover: the Vault at a glance — 7 guards, 2 cameras, gold, a coin toss
+    // pulling a guard away, 2 pages in hand, exit still locked.
+    game.loadLevel(2);
+    game.state = 'playing';
+    game.score = 325;
+    game.coins = 4;
     placeAt(game.player, 8, 10);
     game.player.angle = -Math.PI / 2;
-    level.ledgers[0].taken = true;
-    level.ledgers[1].taken = true;
+    game.level.ledgers[0].taken = true;
+    game.level.ledgers[1].taken = true;
     game.pagesFound = 2;
     const rook = guardByName(game, 'Rook');
     placeAt(rook, 20, 1); rook.angle = Math.PI;
     const bishop = guardByName(game, 'Bishop');
-    placeAt(bishop, 12, 9); bishop.angle = Math.PI / 2;
+    placeAt(bishop, 12, 10); bishop.angle = Math.PI / 2;
+    bishop.state = 'wary'; bishop.suspicion = 62;
+    bishop.investigateX = 15 * TILE + TILE / 2;
+    bishop.investigateY = 10 * TILE + TILE / 2;
+    bishop.labelText = 'WHAT WAS THAT?'; bishop.labelTimer = 2.0;
     const knight = guardByName(game, 'Knight');
-    placeAt(knight, 14, 17); knight.angle = 0;
+    placeAt(knight, 14, 18); knight.angle = 0;
     const queen = guardByName(game, 'Queen');
-    placeAt(queen, 26, 9); queen.angle = Math.PI;
+    placeAt(queen, 18, 9); queen.angle = Math.PI;
     const pawn = guardByName(game, 'Pawn');
-    placeAt(pawn, 15, 6); pawn.angle = 0;
+    placeAt(pawn, 29, 6); pawn.angle = Math.PI;
+    const sage = guardByName(game, 'Sage');
+    placeAt(sage, 20, 12); sage.angle = Math.PI / 2;
+    const warden = guardByName(game, 'Warden');
+    placeAt(warden, 20, 6); warden.angle = Math.PI;
+    const cam = game.cameras[0];
+    cam.time = 1.2;
+    cam.angle = Math.sin(1.2 * 0.7) * 0.6;
+    cam.alarm = 30;
+    game.coin.active = true;
+    game.coin.landed = true;
+    game.coin.ringTimer = 1.4;
+    game.coin.targetX = 15 * TILE + TILE / 2;
+    game.coin.targetY = 10 * TILE + TILE / 2;
   } else if (name === 'cone') {
-    // A guard's cone has caught the thief: suspicion climbing, "?" overhead.
-    placeAt(game.player, 14, 6);
+    // A Gallery camera's cone has caught the thief: alarm climbing, a guard
+    // already turning toward the noise.
+    game.loadLevel(1);
+    game.state = 'playing';
+    game.score = 100;
+    game.coins = 5;
+    placeAt(game.player, 12, 2);
     game.player.angle = Math.PI;
     game.player.sneaking = true;
-    level.ledgers[0].taken = true;
+    game.level.ledgers[0].taken = true;
     game.pagesFound = 1;
+    const cam = game.cameras[0];
+    cam.time = 0;
+    cam.angle = 0;
+    cam.alarm = 78;
     const pawn = guardByName(game, 'Pawn');
-    placeAt(pawn, 10, 6);
+    placeAt(pawn, 16, 2);
     pawn.angle = 0;
     pawn.suspicion = 62;
     pawn.state = 'wary';
+    pawn.investigateX = game.player.x;
+    pawn.investigateY = game.player.y;
     const rook = guardByName(game, 'Rook');
     placeAt(rook, 22, 1); rook.angle = Math.PI;
     const bishop = guardByName(game, 'Bishop');
-    placeAt(bishop, 15, 10); bishop.angle = -Math.PI / 2;
+    placeAt(bishop, 12, 10); bishop.angle = -Math.PI / 2;
     const knight = guardByName(game, 'Knight');
-    placeAt(knight, 8, 17); knight.angle = 0;
+    placeAt(knight, 8, 18); knight.angle = 0;
     const queen = guardByName(game, 'Queen');
-    placeAt(queen, 27, 10); queen.angle = Math.PI / 2;
+    placeAt(queen, 18, 9); queen.angle = Math.PI / 2;
+    const sage = guardByName(game, 'Sage');
+    placeAt(sage, 20, 12); sage.angle = Math.PI;
   } else if (name === 'hide') {
-    // Hidden in a bush while a guard walks past, almost unnoticed.
+    // Hidden in a bush in the Archive while a guard walks past, almost unnoticed.
+    game.loadLevel(0);
+    game.state = 'playing';
+    game.score = 100;
+    game.coins = 5;
     placeAt(game.player, 4, 9);
     game.player.angle = 0;
     game.player.hiddenInBush = true;
-    level.ledgers[0].taken = true;
+    game.level.ledgers[0].taken = true;
     game.pagesFound = 1;
     const bishop = guardByName(game, 'Bishop');
     placeAt(bishop, 7, 9);
@@ -81,10 +112,15 @@ export function stageShot(game, name) {
     const pawn = guardByName(game, 'Pawn');
     placeAt(pawn, 20, 6); pawn.angle = Math.PI;
   } else if (name === 'exit') {
-    // All three pages stolen, exit open, one last guard between the thief and freedom.
+    // All three pages stolen in the Vault, exit open, one last guard between
+    // the thief and freedom.
+    game.loadLevel(2);
+    game.state = 'playing';
+    game.score = 450;
+    game.coins = 2;
     placeAt(game.player, 27, 18);
     game.player.angle = 0;
-    level.ledgers.forEach((l) => { l.taken = true; });
+    game.level.ledgers.forEach((l) => { l.taken = true; });
     game.pagesFound = 3;
     const knight = guardByName(game, 'Knight');
     placeAt(knight, 20, 17);
@@ -92,15 +128,19 @@ export function stageShot(game, name) {
     const rook = guardByName(game, 'Rook');
     placeAt(rook, 12, 1); rook.angle = 0;
     const bishop = guardByName(game, 'Bishop');
-    placeAt(bishop, 15, 8); bishop.angle = Math.PI / 2;
+    placeAt(bishop, 15, 10); bishop.angle = Math.PI / 2;
     const queen = guardByName(game, 'Queen');
     placeAt(queen, 24, 11); queen.angle = -Math.PI / 2;
     const pawn = guardByName(game, 'Pawn');
     placeAt(pawn, 8, 6); pawn.angle = 0;
+    const sage = guardByName(game, 'Sage');
+    placeAt(sage, 20, 12); sage.angle = Math.PI;
+    const warden = guardByName(game, 'Warden');
+    placeAt(warden, 20, 6); warden.angle = Math.PI;
   } else {
     return false;
   }
-  game.player.hiddenInBush = game.player.hiddenInBush && true;
+  game.frozen = true; // staged scenes do not simulate (loadLevel clears it)
   game.player.walkTarget = null;
   return true;
 }

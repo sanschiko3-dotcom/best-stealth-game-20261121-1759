@@ -11,10 +11,14 @@
   <div id="hud">
     <div class="hud-left">
       <span id="hud-title">SHADOW LEDGER</span>
+      <span id="hud-level">HEIST 1/3 — THE ARCHIVE</span>
       <span id="hud-objective">Find 3 ledger pages, then reach the exit unseen.</span>
     </div>
     <div class="hud-mid">
       <span id="hud-pages" title="Ledger pages found">📄 0 / 3</span>
+      <span id="hud-score" title="Score: pages $100, gold $25, ghost bonus $500">💰 $0</span>
+      <span id="hud-coins" title="Coins left — C or right-click to toss one">🪙 5</span>
+      <span id="hud-strikes" title="Strikes — caught 3 times and the run is over">✖ 0/3</span>
       <span id="hud-alert" class="alert-calm">● CALM</span>
       <span id="hud-meter"><span id="hud-meter-fill"></span></span>
       <span id="hud-time">00:00</span>
@@ -27,22 +31,33 @@
   </div>
   <div id="stage">
     <canvas id="game" width="1280" height="800"></canvas>
+    <div id="toast" class="toast hidden"></div>
     <div id="overlay" class="overlay">
       <div class="panel" id="panel-start">
         <h1>SHADOW LEDGER</h1>
-        <p class="tagline">One thief. One archive. Five guards who never blink.</p>
-        <p>Slip through the Meridian Archive after dark. Steal the <b>3 ledger pages</b>,
-        then reach the <b class="exit-word">green exit</b> without being caught.</p>
+        <p class="tagline">One thief. Three heists. Guards, cameras, and a vault that never sleeps.</p>
+        <p>Slip through the Meridian Archive, the Hall of Portraits and the Star
+        Sapphire Vault. Steal the <b>3 ledger pages</b> on each floor, grab the
+        <b>gold</b>, then reach the <b class="exit-word">green exit</b> — finish a
+        heist without being caught for a <b>+$500 ghost bonus</b>.</p>
         <ul class="controls">
           <li><b>WASD / Arrow keys</b> — move &nbsp;·&nbsp; <b>click</b> a floor tile to walk there</li>
           <li><b>Hold Shift</b> — sneak: slower, quieter, harder to spot</li>
+          <li><b>C / right-click</b> — toss a coin: a guard walks over to look</li>
           <li><b>Bushes</b> hide you · <b>crates &amp; walls</b> block a guard's sight</li>
           <li><b>Shadows</b> (dark floor) halve how fast you are spotted</li>
+          <li><b>Cameras</b> sweep the Gallery and the Vault — stay out of their cones</li>
+          <li><b>Caught 3 times</b> and the run is over — a strike sends you back to the door</li>
           <li><b>P</b> pause · <b>R</b> restart · <b>M</b> mute</li>
         </ul>
         <p class="hint">If a guard's cone turns red and the alarm fills, break line of sight and
-        wait — suspicion fades. Get caught and the run is over.</p>
+        wait — suspicion fades. Get caught and you lose a strike, not the run.</p>
         <button id="btn-start" type="button">▶ Begin the heist</button>
+      </div>
+      <div class="panel hidden" id="panel-levelclear">
+        <h1 class="win-title">HEIST COMPLETE</h1>
+        <p id="levelclear-stats">You slipped out with the ledger.</p>
+        <button id="btn-next-level" type="button">▶ Next heist</button>
       </div>
       <div class="panel hidden" id="panel-win">
         <h1 class="win-title">CLEAN GETAWAY</h1>

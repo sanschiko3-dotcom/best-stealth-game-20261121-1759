@@ -39,6 +39,8 @@ export class Guard {
     this.loseTimer = 0; // seconds since the player was last seen while chasing
     this.stepTimer = 0; // footstep pacing
     this.moving = false;
+    this.labelText = ''; // floating callout ("WHAT WAS THAT?") while investigating
+    this.labelTimer = 0;
   }
 
   // Can this guard see the player right now? Cones, range, walls and hiding all count.
@@ -154,10 +156,4 @@ export class Guard {
   }
 }
 
-export const GUARD_DEFS = [
-  { name: 'Rook', color: '#e05a4e', speed: 62, startIndex: 1, waypoints: [[2, 1], [29, 1]] },
-  { name: 'Bishop', color: '#e0a44e', speed: 56, startIndex: 0, waypoints: [[12, 7], [12, 11], [18, 11], [18, 7]] },
-  { name: 'Knight', color: '#e05a9e', speed: 66, startIndex: 1, waypoints: [[2, 17], [29, 17]] },
-  { name: 'Queen', color: '#7a5ae0', speed: 56, startIndex: 0, waypoints: [[24, 7], [24, 11], [29, 11], [29, 7]] },
-  { name: 'Pawn', color: '#4ea8e0', speed: 50, startIndex: 0, waypoints: [[2, 6], [29, 6]] },
-];
+// Guard patrols live in level.js now (one set of defs per heist).
