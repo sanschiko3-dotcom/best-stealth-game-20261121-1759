@@ -12,14 +12,32 @@ function guardByName(game, name) {
   return game.guards.find((g) => g.name === name);
 }
 
+// A callout box at (col, row) naming the thing at (tcol, trow).
+function callout(col, row, tcol, trow, text) {
+  return {
+    x: col * TILE + TILE / 2, y: row * TILE + TILE / 2,
+    tx: tcol * TILE + TILE / 2, ty: trow * TILE + TILE / 2, text,
+  };
+}
+
 export function stageShot(game, name) {
   game.alerts = 0;
   game.time = 42.5; // fixed clock so every render of a scene matches
+  game.fieldNotes = true; // staged scenes show the legend + patrol routes
+  game.callouts = [];
+  game.smoke.active = false;
 
   if (name === 'overview') {
     // Cover: the Vault at a glance — 7 guards, 2 cameras, gold, a coin toss
     // pulling a guard away, 2 pages in hand, exit still locked.
     game.loadLevel(2);
+    game.fieldNotes = true;
+    game.callouts = [
+      callout(15, 8, 15, 10, 'COIN — the guard walks over to look'),
+      callout(25, 4, 27, 6, 'LAMPLIGHT — seen from far away'),
+      callout(4, 7, 2, 9, 'BUSH — hidden unless close'),
+      callout(26, 16, 30, 18, 'EXIT — opens once you hold all 3 pages'),
+    ];
     game.state = 'playing';
     game.score = 325;
     game.coins = 4;
@@ -56,9 +74,19 @@ export function stageShot(game, name) {
     game.coin.targetX = 15 * TILE + TILE / 2;
     game.coin.targetY = 10 * TILE + TILE / 2;
   } else if (name === 'cone') {
-    // A Gallery camera's cone has caught the thief: alarm climbing, a guard
-    // already turning toward the noise.
+    // A Gallery camera's cone has caught the thief — but a smoke pellet
+    // blooms between them, and the cone cannot see through it.
     game.loadLevel(1);
+    game.fieldNotes = true;
+    game.callouts = [
+      callout(17, 4, 8, 2, 'CAMERA — its alarm calls the nearest guard'),
+      callout(10, 5, 10, 2, 'SMOKE — the cone cannot see through it'),
+    ];
+    game.smoke.active = true;
+    game.smoke.landed = true;
+    game.smoke.timer = 3.0;
+    placeAt(game.smoke, 10, 2);
+    game.smokeCount = 1;
     game.state = 'playing';
     game.score = 100;
     game.coins = 5;
@@ -91,6 +119,11 @@ export function stageShot(game, name) {
   } else if (name === 'hide') {
     // Hidden in a bush in the Archive while a guard walks past, almost unnoticed.
     game.loadLevel(0);
+    game.fieldNotes = true;
+    game.callouts = [
+      callout(4, 7, 4, 9, 'HIDDEN — the cone stops at the bushes'),
+      callout(17, 3, 16, 1, 'PATROL — learn the route, slip behind'),
+    ];
     game.state = 'playing';
     game.score = 100;
     game.coins = 5;
@@ -104,7 +137,7 @@ export function stageShot(game, name) {
     bishop.angle = Math.PI;
     bishop.suspicion = 18;
     const rook = guardByName(game, 'Rook');
-    placeAt(rook, 6, 1); rook.angle = 0;
+    placeAt(rook, 20, 1); rook.angle = 0;
     const knight = guardByName(game, 'Knight');
     placeAt(knight, 20, 17); knight.angle = Math.PI;
     const queen = guardByName(game, 'Queen');
@@ -115,10 +148,15 @@ export function stageShot(game, name) {
     // All three pages stolen in the Vault, exit open, one last guard between
     // the thief and freedom.
     game.loadLevel(2);
+    game.fieldNotes = true;
+    game.callouts = [
+      callout(25, 16, 30, 18, 'EXIT OPEN — reach it unseen'),
+      callout(20, 14, 20, 17, 'GHOST +$500 — finish without being caught'),
+    ];
     game.state = 'playing';
     game.score = 450;
     game.coins = 2;
-    placeAt(game.player, 27, 18);
+    placeAt(game.player, 25, 18);
     game.player.angle = 0;
     game.level.ledgers.forEach((l) => { l.taken = true; });
     game.pagesFound = 3;

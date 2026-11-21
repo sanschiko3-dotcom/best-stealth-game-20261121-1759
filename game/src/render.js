@@ -1,6 +1,10 @@
 // All canvas drawing: floor, walls, cover, vision cones, guards, cameras,
 // player, effects. Art is drawn in code only — no image files.
 import { TILE, COLS, ROWS, tileAt } from './level.js';
+import { VISION_RANGE, VISION_HALF_ANGLE } from './guards.js';
+import { CAMERA_RANGE, CAMERA_HALF_ANGLE } from './cameras.js';
+import { conePolygon, drawConeShape, coneColorFor } from './cones.js';
+import { SMOKE_RADIUS, SMOKE_DURATION } from './gadgets.js';
 import { mulberry32, clamp } from './rng.js';
 
 const floorShade = [];
@@ -42,27 +46,6 @@ export function drawFloor(ctx, palette = DEFAULT_PALETTE) {
         ctx.fillRect(x, y, TILE, TILE);
       }
     }
-  }
-}
-
-// Warm lamp pools: light that marks where you are easy to see.
-export function drawLamps(ctx, level, time) {
-  for (const lamp of level.lamps) {
-    const flicker = 0.85 + Math.sin(time * 2.1 + lamp.x * 0.05) * 0.06;
-    const glow = ctx.createRadialGradient(lamp.x, lamp.y, 4, lamp.x, lamp.y, 95);
-    glow.addColorStop(0, 'rgba(255,196,110,' + (0.16 * flicker) + ')');
-    glow.addColorStop(1, 'rgba(255,196,110,0)');
-    ctx.fillStyle = glow;
-    ctx.fillRect(lamp.x - 95, lamp.y - 95, 190, 190);
-    ctx.fillStyle = '#ffd9a0';
-    ctx.beginPath();
-    ctx.arc(lamp.x, lamp.y, 4, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(255,217,160,0.7)';
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.arc(lamp.x, lamp.y, 8, 0, Math.PI * 2);
-    ctx.stroke();
   }
 }
 
@@ -129,18 +112,25 @@ export function drawLedgersAndExit(ctx, level, time) {
   const e = level.exit;
   const open = level.ledgers.every((l) => l.taken);
   const pulse = 0.5 + Math.sin(time * 2.5) * 0.2;
+  if (open) {
+    const glow = ctx.createRadialGradient(e.x, e.y, 4, e.x, e.y, 64);
+    glow.addColorStop(0, 'rgba(123,228,149,' + (0.4 * pulse + 0.2) + ')');
+    glow.addColorStop(1, 'rgba(123,228,149,0)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(e.x - 64, e.y - 64, 128, 128);
+  }
   ctx.fillStyle = open ? 'rgba(123,228,149,' + pulse + ')' : 'rgba(224,90,78,' + (pulse * 0.6) + ')';
-  ctx.fillRect(e.x - 19, e.y - 19, 38, 38);
+  ctx.fillRect(e.x - 23, e.y - 23, 46, 46);
   ctx.fillStyle = open ? '#12351d' : '#3a1414';
-  ctx.fillRect(e.x - 14, e.y - 14, 28, 28);
+  ctx.fillRect(e.x - 17, e.y - 17, 34, 34);
   ctx.fillStyle = open ? '#7be495' : '#e05a4e';
-  ctx.font = 'bold 12px sans-serif';
+  ctx.font = 'bold 13px sans-serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText(open ? 'EXIT' : 'LOCK', e.x, e.y + 1);
   ctx.strokeStyle = open ? '#7be495' : '#e05a4e';
-  ctx.lineWidth = 2;
-  ctx.strokeRect(e.x - 19, e.y - 19, 38, 38);
+  ctx.lineWidth = 2.5;
+  ctx.strokeRect(e.x - 23, e.y - 23, 46, 46);
 }
 
 // Optional loot: small gold coins worth $25 each.
@@ -155,15 +145,15 @@ export function drawGoldCoins(ctx, level, time) {
     ctx.fillRect(coin.x - 22, coin.y - 22, 44, 44);
     ctx.fillStyle = '#ffcf4d';
     ctx.beginPath();
-    ctx.arc(coin.x, coin.y + Math.sin(time * 2 + coin.col) * 1.5, 7, 0, Math.PI * 2);
+    ctx.arc(coin.x, coin.y + Math.sin(time * 2 + coin.col) * 1.5, 9, 0, Math.PI * 2);
     ctx.fill();
     ctx.strokeStyle = '#a87c1a';
     ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.arc(coin.x, coin.y + Math.sin(time * 2 + coin.col) * 1.5, 7, 0, Math.PI * 2);
+    ctx.arc(coin.x, coin.y + Math.sin(time * 2 + coin.col) * 1.5, 9, 0, Math.PI * 2);
     ctx.stroke();
     ctx.fillStyle = '#a87c1a';
-    ctx.font = 'bold 9px sans-serif';
+    ctx.font = 'bold 10px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText('$', coin.x, coin.y + Math.sin(time * 2 + coin.col) * 1.5 + 0.5);
@@ -171,61 +161,49 @@ export function drawGoldCoins(ctx, level, time) {
 }
 
 export function drawGuard(ctx, guard, time) {
-  const range = 185;
-  const half = Math.PI / 5.2;
-  const stateColor =
-    guard.state === 'chase' ? 'rgba(255,70,50,' : guard.state === 'wary' ? 'rgba(255,190,60,' : 'rgba(255,220,110,';
-  const grad = ctx.createRadialGradient(guard.x, guard.y, 8, guard.x, guard.y, range);
-  grad.addColorStop(0, stateColor + '0.34)');
-  grad.addColorStop(1, stateColor + '0.05)');
-  ctx.fillStyle = grad;
-  ctx.beginPath();
-  ctx.moveTo(guard.x, guard.y);
-  ctx.arc(guard.x, guard.y, range, guard.angle - half, guard.angle + half);
-  ctx.closePath();
-  ctx.fill();
-  ctx.strokeStyle = stateColor + '0.5)';
-  ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  ctx.moveTo(guard.x, guard.y);
-  ctx.arc(guard.x, guard.y, range, guard.angle - half, guard.angle + half);
-  ctx.closePath();
-  ctx.stroke();
+  // Vision cone, clipped by walls and crates: what the guard can actually see.
+  const points = conePolygon(guard.x, guard.y, guard.angle, VISION_HALF_ANGLE, VISION_RANGE);
+  drawConeShape(ctx, points, coneColorFor(guard.state));
 
-  // Body: a guard in a dark uniform with a cap, facing `angle`.
+  // Body: a guard in a dark uniform with a cap, facing `angle` — big enough
+  // to read at a glance, ringed in white against the floor.
   ctx.save();
   ctx.translate(guard.x, guard.y);
   ctx.rotate(guard.angle);
+  ctx.fillStyle = 'rgba(232,238,251,0.9)';
+  ctx.beginPath();
+  ctx.arc(0, 0, 18, 0, Math.PI * 2);
+  ctx.fill();
   ctx.fillStyle = '#20242e';
   ctx.beginPath();
-  ctx.arc(0, 0, 13, 0, Math.PI * 2);
+  ctx.arc(0, 0, 16, 0, Math.PI * 2);
   ctx.fill();
   ctx.fillStyle = guard.color;
   ctx.beginPath();
-  ctx.arc(0, 0, 9, 0, Math.PI * 2);
+  ctx.arc(0, 0, 12, 0, Math.PI * 2);
   ctx.fill();
   ctx.fillStyle = '#0c0e14';
-  ctx.fillRect(6, -5, 9, 10); // cap brim / visor direction
+  ctx.fillRect(8, -6, 11, 12); // cap brim / visor direction
   ctx.fillStyle = '#ffd76a';
   ctx.beginPath();
-  ctx.arc(11, 0, 2.5, 0, Math.PI * 2);
+  ctx.arc(14, 0, 3, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
 
   // Suspicion: a bar and a "!" over the head once the guard notices something.
   if (guard.suspicion > 4) {
-    const w = 34;
+    const w = 44;
     const frac = clamp(guard.suspicion / 100, 0, 1);
     ctx.fillStyle = 'rgba(0,0,0,0.55)';
-    ctx.fillRect(guard.x - w / 2, guard.y - 30, w, 6);
+    ctx.fillRect(guard.x - w / 2, guard.y - 38, w, 7);
     ctx.fillStyle = guard.state === 'chase' ? '#ff5040' : guard.state === 'wary' ? '#ffbe3c' : '#ffd76a';
-    ctx.fillRect(guard.x - w / 2, guard.y - 30, w * frac, 6);
+    ctx.fillRect(guard.x - w / 2, guard.y - 38, w * frac, 7);
     if (guard.state !== 'patrol') {
       ctx.fillStyle = guard.state === 'chase' ? '#ff5040' : '#ffbe3c';
-      ctx.font = 'bold 22px sans-serif';
+      ctx.font = 'bold 26px sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'bottom';
-      ctx.fillText(guard.state === 'chase' ? '!' : '?', guard.x, guard.y - 32);
+      ctx.fillText(guard.state === 'chase' ? '!' : '?', guard.x, guard.y - 40);
     }
   }
   // Floating callout while the guard investigates a thrown coin.
@@ -234,38 +212,30 @@ export function drawGuard(ctx, guard, time) {
     ctx.font = 'bold 12px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'bottom';
-    ctx.fillText(guard.labelText, guard.x, guard.y - 44);
+    ctx.fillText(guard.labelText, guard.x, guard.y - 52);
   }
-  ctx.fillStyle = 'rgba(223,230,242,0.75)';
-  ctx.font = '11px sans-serif';
+  // Name + state, so the thief can read who is coming and what they are doing.
+  const stateWord = guard.state === 'chase' ? 'HUNTED' : guard.state === 'wary' ? 'SUSPICIOUS' : 'PATROL';
+  ctx.fillStyle = 'rgba(223,230,242,0.9)';
+  ctx.font = 'bold 12px sans-serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'top';
-  ctx.fillText(guard.name, guard.x, guard.y + 17);
+  ctx.fillText(guard.name, guard.x, guard.y + 21);
+  ctx.fillStyle = guard.state === 'chase' ? '#ff8a7a' : guard.state === 'wary' ? '#ffbe3c' : 'rgba(159,176,201,0.9)';
+  ctx.font = '10px sans-serif';
+  ctx.fillText(stateWord, guard.x, guard.y + 35);
 }
 
 // Security cameras: wall mount, sweeping pale cone, red flash when tripped.
+// The cone is clipped by walls like a guard's, so cover reads the same way.
 export function drawCameras(ctx, cameras) {
   for (const cam of cameras) {
-    const range = 210;
-    const half = Math.PI / 6.5;
     const alarming = cam.flash > 0;
-    const coneColor = alarming ? 'rgba(255,70,50,' : 'rgba(170,220,255,';
-    const grad = ctx.createRadialGradient(cam.x, cam.y, 6, cam.x, cam.y, range);
-    grad.addColorStop(0, coneColor + (alarming ? '0.4)' : '0.26)'));
-    grad.addColorStop(1, coneColor + '0.04)');
-    ctx.fillStyle = grad;
-    ctx.beginPath();
-    ctx.moveTo(cam.x, cam.y);
-    ctx.arc(cam.x, cam.y, range, cam.angle - half, cam.angle + half);
-    ctx.closePath();
-    ctx.fill();
-    ctx.strokeStyle = coneColor + '0.45)';
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.moveTo(cam.x, cam.y);
-    ctx.arc(cam.x, cam.y, range, cam.angle - half, cam.angle + half);
-    ctx.closePath();
-    ctx.stroke();
+    const rgb = alarming ? '255,70,50' : '170,220,255';
+    const ox = cam.x + Math.cos(cam.angle) * 24;
+    const oy = cam.y + Math.sin(cam.angle) * 24;
+    const points = conePolygon(ox, oy, cam.angle, CAMERA_HALF_ANGLE, CAMERA_RANGE);
+    drawConeShape(ctx, points, rgb, alarming ? 0.24 : 0.14);
     // Mount + lens.
     ctx.save();
     ctx.translate(cam.x, cam.y);
@@ -316,7 +286,22 @@ export function drawCoinToss(ctx, coin, time) {
   ctx.fill();
 }
 
-export function drawPlayer(ctx, player, time) {
+export function drawPlayer(ctx, player, time, visibility = 'dim') {
+  // A ring under the thief reads how lit they are: gold in lamplight,
+  // blue in shadow — the lighting that shows what is safe.
+  if (visibility === 'lit') {
+    ctx.strokeStyle = 'rgba(255,215,106,0.55)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(player.x, player.y, 19, 0, Math.PI * 2);
+    ctx.stroke();
+  } else if (visibility === 'shadow') {
+    ctx.strokeStyle = 'rgba(120,170,255,0.5)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(player.x, player.y, 19, 0, Math.PI * 2);
+    ctx.stroke();
+  }
   // Noise ring while walking loud.
   if (player.moving && !player.sneaking) {
     const phase = (time * 2.4) % 1;
@@ -334,19 +319,19 @@ export function drawPlayer(ctx, player, time) {
   // Hooded cloak: dark teal body, gold trim, face shadow.
   ctx.fillStyle = '#0f3d33';
   ctx.beginPath();
-  ctx.arc(0, 0, 13, 0, Math.PI * 2);
+  ctx.arc(0, 0, 15, 0, Math.PI * 2);
   ctx.fill();
   ctx.strokeStyle = '#ffd76a';
-  ctx.lineWidth = 1.5;
+  ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.arc(0, 0, 13, -1.1, 1.1);
+  ctx.arc(0, 0, 15, -1.1, 1.1);
   ctx.stroke();
   ctx.fillStyle = '#123b32';
-  ctx.fillRect(7, -6, 8, 12);
+  ctx.fillRect(8, -7, 9, 14);
   ctx.fillStyle = '#e8eefb';
   ctx.beginPath();
-  ctx.arc(4, -3.5, 1.8, 0, Math.PI * 2);
-  ctx.arc(4, 3.5, 1.8, 0, Math.PI * 2);
+  ctx.arc(5, -4, 2, 0, Math.PI * 2);
+  ctx.arc(5, 4, 2, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
   if (player.sneaking) {
@@ -361,6 +346,36 @@ export function drawPlayer(ctx, player, time) {
     ctx.textAlign = 'center';
     ctx.fillText('hidden', player.x, player.y - 22);
   }
+}
+
+// The smoke pellet: a small pellet in flight, then a grey-blue cloud no
+// vision cone can see through. Fixed puffs, so a frozen scene renders the
+// same cloud every time.
+export function drawSmoke(ctx, smoke, time) {
+  if (!smoke.active) return;
+  if (!smoke.landed) {
+    ctx.fillStyle = '#c8cfdd';
+    ctx.beginPath();
+    ctx.arc(smoke.x, smoke.y, 5, 0, Math.PI * 2);
+    ctx.fill();
+    return;
+  }
+  const fade = clamp(smoke.timer / SMOKE_DURATION, 0, 1);
+  const puffs = [
+    [0, 0, 34], [-26, -12, 26], [26, -14, 28], [-18, 20, 24], [22, 18, 26], [0, -26, 22],
+  ];
+  for (const [ox, oy, r] of puffs) {
+    const wobble = Math.sin(time * 1.3 + ox) * 2;
+    ctx.fillStyle = 'rgba(158,170,196,' + (0.5 * fade) + ')';
+    ctx.beginPath();
+    ctx.arc(smoke.x + ox + wobble, smoke.y + oy, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.strokeStyle = 'rgba(220,228,242,' + (0.55 * fade) + ')';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(smoke.x, smoke.y, SMOKE_RADIUS, 0, Math.PI * 2);
+  ctx.stroke();
 }
 
 export function drawParticles(ctx, particles) {

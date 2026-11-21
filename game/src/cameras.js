@@ -3,6 +3,7 @@
 // of sight. At full alarm it calls the nearest guard to investigate the
 // player's position, then the alarm drops back halfway.
 import { TILE, hasLineOfSight } from './level.js';
+import { smokeBlocksSight } from './gadgets.js';
 import { clamp, distance, angleDifference } from './rng.js';
 
 export const CAMERA_RANGE = 210;
@@ -24,7 +25,8 @@ export class SecurityCamera {
 
   // Can this camera see the player right now? The sight line starts just
   // in front of the wall mount, so the camera's own wall tile never blocks it.
-  canSee(player) {
+  // `blockers` are smoke clouds: sight through one is blind.
+  canSee(player, blockers = []) {
     const ox = this.x + Math.cos(this.angle) * 24;
     const oy = this.y + Math.sin(this.angle) * 24;
     const d = distance(ox, oy, player.x, player.y);
@@ -34,6 +36,9 @@ export class SecurityCamera {
       return { seen: false, rate: 0 };
     }
     if (!hasLineOfSight(ox, oy, player.x, player.y)) return { seen: false, rate: 0 };
+    for (const b of blockers) {
+      if (smokeBlocksSight(ox, oy, player.x, player.y, b)) return { seen: false, rate: 0 };
+    }
     if (player.hiddenInBush && d > 46) return { seen: false, rate: 0 };
     let rate = 78 * (1 - (d / CAMERA_RANGE) * 0.4);
     if (player.sneaking) rate *= 0.6;
@@ -41,11 +46,11 @@ export class SecurityCamera {
   }
 
   // Sweep the cone, build or drain alarm. Returns true the moment it trips.
-  update(dt, player) {
+  update(dt, player, blockers = []) {
     this.time += dt;
     this.angle = this.baseAngle + Math.sin(this.time * this.speed) * this.sweep;
     if (this.flash > 0) this.flash -= dt;
-    const seen = this.canSee(player);
+    const seen = this.canSee(player, blockers);
     if (seen.seen) {
       this.alarm = clamp(this.alarm + seen.rate * dt, 0, CAMERA_ALARM_MAX);
       if (this.alarm >= CAMERA_ALARM_MAX) {

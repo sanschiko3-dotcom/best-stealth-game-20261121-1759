@@ -86,7 +86,7 @@ export const LEVELS = [
   {
     name: 'THE VAULT',
     subtitle: 'Heist 3 of 3 — the Star Sapphire vault',
-    palette: { floorA: '#1d1810', floorB: '#201a12', wall: '#33291d', wallTop: '#453723', wallBottom: '#221a10', shadow: '#14100a' },
+    palette: { floorA: '#171a2e', floorB: '#191d33', wall: '#2a3350', wallTop: '#3d4a70', wallBottom: '#1c2340', shadow: '#10142a' },
     lamps: [[5, 2], [25, 6], [10, 12], [22, 16], [14, 10]],
     guards: [
       { name: 'Rook', color: '#e05a4e', speed: 66, startIndex: 1, waypoints: [[2, 1], [29, 1]] },

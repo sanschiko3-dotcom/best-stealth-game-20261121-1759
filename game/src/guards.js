@@ -4,6 +4,7 @@
 // so a near miss can be recovered from; full suspicion means a chase, and a
 // touch while chasing means caught.
 import { TILE, hasLineOfSight, tileKindAtPx } from './level.js';
+import { smokeBlocksSight } from './gadgets.js';
 import { clamp, distance, angleDifference } from './rng.js';
 
 export const VISION_RANGE = 185;
@@ -43,8 +44,9 @@ export class Guard {
     this.labelTimer = 0;
   }
 
-  // Can this guard see the player right now? Cones, range, walls and hiding all count.
-  canSee(player) {
+  // Can this guard see the player right now? Cones, range, walls, smoke and
+  // hiding all count. `blockers` are smoke clouds: sight through one is blind.
+  canSee(player, blockers = []) {
     const d = distance(this.x, this.y, player.x, player.y);
     if (d > VISION_RANGE) return { seen: false, rate: 0 };
     const toPlayer = Math.atan2(player.y - this.y, player.x - this.x);
@@ -52,6 +54,9 @@ export class Guard {
       return { seen: false, rate: 0 };
     }
     if (!hasLineOfSight(this.x, this.y, player.x, player.y)) return { seen: false, rate: 0 };
+    for (const b of blockers) {
+      if (smokeBlocksSight(this.x, this.y, player.x, player.y, b)) return { seen: false, rate: 0 };
+    }
     if (player.hiddenInBush && d > 46) return { seen: false, rate: 0 };
     // Closer and standing still in the open is spotted fastest; sneaking, crouching
     // in shadow and distance all slow it down.
@@ -62,8 +67,8 @@ export class Guard {
     return { seen: true, rate };
   }
 
-  update(dt, player, onFootstep) {
-    const seen = this.canSee(player);
+  update(dt, player, onFootstep, blockers = []) {
+    const seen = this.canSee(player, blockers);
     if (seen.seen) {
       this.suspicion = clamp(this.suspicion + seen.rate * dt, 0, SUSPICION_MAX);
       this.lastSeenX = player.x;

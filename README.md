@@ -14,6 +14,25 @@ Vault — steal the **3 ledger pages** on each floor, grab the **gold**, then
 reach the **green exit**. Finish a heist without being caught for a
 **+$500 ghost bonus**.
 
+### v3 — built to be read at a glance
+
+- **Vision cones clipped by walls and crates**: every cone is a fan of rays
+  that stops at the first solid tile, so cover reads the way it plays —
+  a cone that ends at a wall means the floor behind it is safe
+- **Guards you can find**: bigger figures ringed in white, name + state
+  under each one (`PATROL` / `SUSPICIOUS` / `HUNTED`), `?` and `!` overhead
+- **Field notes (H)**: an in-game legend card, dotted patrol routes you can
+  learn, and callouts naming what each thing does — the staged screenshots
+  show them on
+- **Smoke pellet (Q, 2 per heist)**: throw one and its cloud blinds every
+  cone it stands between, so you can slip past a camera or break a chase
+- **Lighting that shows what is safe**: warm lamp pools where you are easy
+  to see, dark shadow floor where you are hard to spot, a gold ring under
+  you in lamplight and a blue ring in shadow; the HUD says
+  `IN LIGHT` / `IN SHADOW` / `HIDDEN` / `DIM`
+- **The Vault re-painted navy**: no more muddy brown — deep blue floors,
+  slate walls, gold lamps, like the Archive and the Gallery
+
 - **3 heists, 5 → 7 guards** (Rook, Bishop, Knight, Queen, Pawn, Sage,
   Warden), each with a sweeping **vision cone** that turns yellow → red as
   suspicion builds — later floors patrol faster and denser
@@ -47,6 +66,8 @@ reach the **green exit**. Finish a heist without being caught for a
 | Click a floor tile | Walk there |
 | Hold Shift | Sneak |
 | C / right-click | Toss a coin to distract a guard |
+| Q | Throw a smoke pellet (cones cannot see through smoke) |
+| H | Field notes: legend, patrol routes and callouts |
 | P | Pause |
 | R | Restart |
 | M | Mute |
@@ -62,10 +83,12 @@ cd game && python3 -m http.server 8080
 ```
 
 Screenshot scenes are staged deterministically from the live game code:
-`index.html?shot=overview|cone|hide|exit`. A scripted self-test runs at
-`index.html?selftest=1` (12 checks: level parsing, movement, patrol,
+`index.html?shot=overview|cone|hide|exit` — every scene shows the field
+notes, patrol routes and callouts. A scripted self-test runs at
+`index.html?selftest=1` (16 checks: level parsing, movement, patrol,
 detection, hiding, level clear, heist advance, win, strikes, coin distraction,
-camera alarm).
+camera alarm, smoke blocking sight, smoke pellet use, wall-clipped cones,
+staged field notes).
 
 ## Layout
 
@@ -75,7 +98,11 @@ camera alarm).
 - `game/src/level.js` — the three heist floors, collision, line of sight
 - `game/src/guards.js` — patrols, vision cones, suspicion, chase
 - `game/src/cameras.js` — sweeping security cameras and their alarm
-- `game/src/gadgets.js` — the coin-toss distraction gadget
+- `game/src/cones.js` — wall-clipped vision-cone polygons and their colours
+- `game/src/lighting.js` — lamp pools and the lit/shadow reading of a position
+- `game/src/patrols.js` — dotted patrol routes for the field notes
+- `game/src/annotations.js` — the field-notes legend and callouts
+- `game/src/gadgets.js` — the coin-toss and smoke-pellet gadgets
 - `game/src/player.js` — movement, sneak, click-to-walk, hiding
 - `game/src/audio.js` — synthesised WebAudio sound
 - `game/src/render.js` — all canvas drawing

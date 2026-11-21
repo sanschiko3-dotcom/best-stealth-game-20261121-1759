@@ -2,15 +2,19 @@
 // Three heists (Archive, Gallery, Vault), security cameras, a coin-toss gadget,
 // gold loot, a score, and strikes instead of instant loss. Rendering lives in render.js.
 import { parseLevel, LEVELS } from './level.js';
-import { Guard, SUSPICION_MAX } from './guards.js';
+import { Guard, SUSPICION_MAX, VISION_RANGE, VISION_HALF_ANGLE } from './guards.js';
 import { SecurityCamera, CAMERA_ALARM_MAX } from './cameras.js';
-import { CoinToss, COINS_PER_LEVEL } from './gadgets.js';
+import { CoinToss, SmokePellet, COINS_PER_LEVEL, SMOKE_PER_LEVEL, SMOKE_RADIUS } from './gadgets.js';
 import { Player } from './player.js';
 import { SoundEngine } from './audio.js';
 import { stageShot } from './shots.js';
+import { drawLamps, visibilityAt } from './lighting.js';
+import { drawPatrolPaths } from './patrols.js';
+import { drawFieldNotes, drawCallouts } from './annotations.js';
+import { conePolygon } from './cones.js';
 import {
-  drawFloor, drawLamps, drawCratesAndBushes, drawLedgersAndExit,
-  drawGoldCoins, drawGuard, drawCameras, drawCoinToss,
+  drawFloor, drawCratesAndBushes, drawLedgersAndExit,
+  drawGoldCoins, drawGuard, drawCameras, drawCoinToss, drawSmoke,
   drawPlayer, drawParticles, drawVignette,
 } from './render.js';
 import { clamp, distance } from './rng.js';
@@ -24,7 +28,10 @@ const hudPages = document.getElementById('hud-pages');
 const hudScore = document.getElementById('hud-score');
 const hudStrikes = document.getElementById('hud-strikes');
 const hudCoins = document.getElementById('hud-coins');
+const hudSmoke = document.getElementById('hud-smoke');
 const hudAlert = document.getElementById('hud-alert');
+const hudVisibility = document.getElementById('hud-visibility');
+const hudGhost = document.getElementById('hud-ghost');
 const hudMeter = document.getElementById('hud-meter-fill');
 const hudTime = document.getElementById('hud-time');
 const hudObjective = document.getElementById('hud-objective');
@@ -65,6 +72,10 @@ export function createGame() {
     guards: [],
     cameras: [],
     coin: new CoinToss(),
+    smoke: new SmokePellet(),
+    smokeCount: SMOKE_PER_LEVEL,
+    fieldNotes: false, // H toggles the legend, patrol routes and callouts
+    callouts: [], // staged-scene annotations {x, y, tx, ty, text}
     particles: [],
     state: 'menu', // menu | playing | paused | levelclear | won | lost
     frozen: false, // staged screenshot scenes do not simulate
@@ -88,6 +99,10 @@ export function createGame() {
       this.cameras = this.level.cameraDefs.map((def) => new SecurityCamera(def));
       this.coin = new CoinToss();
       this.coins = COINS_PER_LEVEL;
+      this.smoke = new SmokePellet();
+      this.smokeCount = SMOKE_PER_LEVEL;
+      this.fieldNotes = false;
+      this.callouts = [];
       this.particles.length = 0;
       this.pagesFound = 0;
       this.strikesAtLevelStart = this.strikes;
@@ -134,6 +149,15 @@ export function createGame() {
       return true;
     },
 
+    // Throw a smoke pellet: it blooms into a cloud no cone can see through.
+    throwSmokeAt(tx, ty) {
+      if (this.state !== 'playing' || this.frozen) return false;
+      if (this.smokeCount <= 0 || this.smoke.active) return false;
+      this.smokeCount -= 1;
+      this.smoke.throwSmoke(this.player.x, this.player.y, clamp(tx, 20, 1260), clamp(ty, 20, 780));
+      return true;
+    },
+
     // Caught by a chasing guard: a strike, a respawn, and one more chance.
     registerCatch() {
       this.strikes += 1;
@@ -149,6 +173,7 @@ export function createGame() {
       this.guards = this.level.guardDefs.map((def) => new Guard(def));
       this.cameras = this.level.cameraDefs.map((def) => new SecurityCamera(def));
       this.coin = new CoinToss();
+      this.smoke = new SmokePellet();
     },
 
     update(dt) {
@@ -170,6 +195,11 @@ export function createGame() {
       };
       this.player.update(dt, this.keys, onPlayerStep);
 
+      // A bloomed smoke cloud blinds every cone it stands between.
+      const blockers = this.smoke.active && this.smoke.landed
+        ? [{ x: this.smoke.x, y: this.smoke.y, r: SMOKE_RADIUS }]
+        : [];
+
       // Running loud draws nearby patrolling guards toward the noise.
       if (this.player.noiseRadius > 0) {
         for (const g of this.guards) {
@@ -183,13 +213,13 @@ export function createGame() {
         }
       }
       for (const g of this.guards) {
-        g.update(dt, this.player, onGuardStep);
+        g.update(dt, this.player, onGuardStep, blockers);
         if (g.labelTimer > 0) g.labelTimer -= dt;
       }
 
       // Security cameras: a trip calls the nearest guard to your position.
       for (const cam of this.cameras) {
-        if (cam.update(dt, this.player)) {
+        if (cam.update(dt, this.player, blockers)) {
           sound.alertSting();
           this.alerts += 1;
           this.showToast('CAMERA SPOTTED YOU — a guard is coming.', 2.5);
@@ -224,6 +254,9 @@ export function createGame() {
           this.coin.distracted = true;
         }
       }
+
+      // The smoke pellet: on blooming it hisses open into its cloud.
+      if (this.smoke.update(dt) === 'bloomed') sound.clink();
 
       const anyChase = this.guards.some((g) => g.state === 'chase');
       if (anyChase && !this.wasChase) {
@@ -301,14 +334,20 @@ export function createGame() {
     render() {
       drawFloor(ctx, this.level.palette);
       drawLamps(ctx, this.level, this.time);
+      if (this.fieldNotes) drawPatrolPaths(ctx, this.guards);
       drawCratesAndBushes(ctx, this.level, this.time);
       drawLedgersAndExit(ctx, this.level, this.time);
       drawGoldCoins(ctx, this.level, this.time);
       drawCameras(ctx, this.cameras);
       for (const g of this.guards) drawGuard(ctx, g, this.time);
       drawCoinToss(ctx, this.coin, this.time);
-      drawPlayer(ctx, this.player, this.time);
+      drawSmoke(ctx, this.smoke, this.time);
+      drawPlayer(ctx, this.player, this.time, visibilityAt(this.level, this.player.x, this.player.y));
       drawParticles(ctx, this.particles);
+      if (this.fieldNotes) {
+        drawFieldNotes(ctx);
+        drawCallouts(ctx, this.callouts);
+      }
       drawVignette(ctx);
     },
   };
@@ -325,6 +364,12 @@ function syncHud() {
   hudScore.textContent = '$' + game.score;
   hudStrikes.textContent = '✖ ' + game.strikes + '/3';
   hudCoins.textContent = '🪙 ' + game.coins;
+  hudSmoke.textContent = '💨 ' + game.smokeCount;
+  const vis = game.player.hiddenInBush ? 'hidden' : visibilityAt(game.level, game.player.x, game.player.y);
+  hudVisibility.textContent = vis === 'hidden' ? '◉ HIDDEN' : vis === 'lit' ? '☀ IN LIGHT' : vis === 'shadow' ? '◐ IN SHADOW' : '○ DIM';
+  hudVisibility.className = vis === 'hidden' ? 'vis-hidden' : vis === 'lit' ? 'vis-lit' : vis === 'shadow' ? 'vis-shadow' : 'vis-dim';
+  hudGhost.textContent = '👻 +$500';
+  hudGhost.className = game.strikes > 0 ? 'ghost-lost' : '';
   const maxSuspicion = Math.max(0, ...game.guards.map((g) => g.suspicion));
   const maxCam = Math.max(0, ...game.cameras.map((c) => c.alarm));
   const worst = game.guards.some((g) => g.state === 'chase')
@@ -336,8 +381,8 @@ function syncHud() {
   hudMeter.style.background = worst === 'chase' ? '#ff5040' : worst === 'wary' ? '#ffbe3c' : '#ffd76a';
   hudTime.textContent = formatTime(game.time);
   hudObjective.textContent = game.pagesFound === 3
-    ? 'All pages stolen — reach the green EXIT!'
-    : 'Steal 3 pages \u2192 exit.';
+    ? 'All pages stolen — reach EXIT!'
+    : '3 pages → exit.';
   if (game.state === 'levelclear') {
     document.getElementById('levelclear-stats').textContent =
       game.level.name + ' cleared — score $' + game.score +
@@ -379,7 +424,16 @@ window.addEventListener('keydown', (e) => {
   if (e.code === 'KeyP') togglePause();
   else if (e.code === 'KeyR') restart();
   else if (e.code === 'KeyM') toggleMute();
-  else if (e.code === 'KeyC') {
+  else if (e.code === 'KeyH') {
+    // Field notes: the legend, patrol routes and callouts.
+    game.fieldNotes = !game.fieldNotes;
+  } else if (e.code === 'KeyQ') {
+    // Throw a smoke pellet ahead of you: cones cannot see through smoke.
+    game.throwSmokeAt(
+      game.player.x + Math.cos(game.player.angle) * 170,
+      game.player.y + Math.sin(game.player.angle) * 170,
+    );
+  } else if (e.code === 'KeyC') {
     // Toss a coin ahead of you to pull a guard away.
     game.throwCoinAt(
       game.player.x + Math.cos(game.player.angle) * 170,
@@ -439,7 +493,7 @@ function togglePause() {
 function toggleMute() {
   sound.ensure();
   sound.setMuted(!sound.muted);
-  document.getElementById('btn-mute').textContent = sound.muted ? '🔇 Muted' : '🔊 Sound';
+  document.getElementById('btn-mute').textContent = sound.muted ? '🔇' : '🔊';
 }
 
 document.getElementById('btn-start').addEventListener('click', startGame);
@@ -590,6 +644,45 @@ function runSelfTest() {
     g.player.x = 12 * 40 + 20; g.player.y = 2 * 40 + 20; // east of the camera
     for (let i = 0; i < 60; i++) g.update(1 / 60);
     return cam.alarm > 20;
+  });
+  check('smoke blocks a guard\'s sight through the cloud', () => {
+    const g = createGame();
+    g.reset();
+    const guard = g.guards[4]; // Pawn
+    guard.x = 10 * 40 + 20; guard.y = 6 * 40 + 20; guard.angle = 0;
+    g.player.x = 13 * 40 + 20; g.player.y = 6 * 40 + 20;
+    const cloud = { x: 11 * 40 + 60, y: 6 * 40 + 20, r: 70 };
+    if (guard.canSee(g.player).seen !== true) return false;
+    return guard.canSee(g.player, [cloud]).seen === false;
+  });
+  check('throwing smoke uses one pellet and blooms a cloud', () => {
+    const g = createGame();
+    g.reset();
+    const ok = g.throwSmokeAt(g.player.x + 100, g.player.y);
+    if (!ok || g.smokeCount !== 1 || !g.smoke.active) return false;
+    for (let i = 0; i < 30; i++) g.update(1 / 60);
+    return g.smoke.landed === true && g.smoke.timer > 0;
+  });
+  check('a vision cone stops at a wall instead of passing through it', () => {
+    const g = createGame();
+    g.reset();
+    g.loadLevel(2); // the Vault: a wall stands at column 8, row 2
+    const guard = g.guards[0]; // Rook
+    guard.x = 5 * 40 + 20; guard.y = 2 * 40 + 20; guard.angle = 0; // facing east
+    const points = conePolygon(guard.x, guard.y, guard.angle, VISION_HALF_ANGLE, VISION_RANGE);
+    let maxEast = 0;
+    for (const p of points) {
+      const a = Math.atan2(p.y - guard.y, p.x - guard.x);
+      if (Math.abs(a) < 0.18) maxEast = Math.max(maxEast, p.x - guard.x);
+    }
+    // The wall face is 100px east of the guard; the cone must stop at it.
+    return maxEast > 40 && maxEast < 115;
+  });
+  check('staging a shot turns the field notes and callouts on', () => {
+    const g = createGame();
+    g.reset();
+    if (!stageShot(g, 'overview')) return false;
+    return g.fieldNotes === true && g.callouts.length >= 3;
   });
   const passed = results.filter((r) => r.pass).length;
   const el = document.getElementById('selftest');

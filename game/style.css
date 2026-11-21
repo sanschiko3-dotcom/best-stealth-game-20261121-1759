@@ -18,9 +18,18 @@ body {
 #hud-level { font-weight: 700; letter-spacing: 1px; color: #cdd8ea; margin-right: 6px; font-size: 13px; white-space: nowrap; }
 #hud-score { font-weight: 700; color: #ffcf4d; }
 #hud-coins { font-weight: 700; color: #cdd8ea; }
+#hud-smoke { font-weight: 700; color: #cdd8ea; }
+#hud-visibility { font-weight: 800; letter-spacing: 0.5px; }
+.vis-lit { color: #ffd76a; }
+.vis-shadow { color: #8fb8ff; }
+.vis-dim { color: #9fb0c9; }
+.vis-hidden { color: #7be495; }
+#hud-ghost { font-weight: 700; color: #7be495; }
+#hud-ghost.ghost-lost { color: #5d6d88; text-decoration: line-through; }
 #hud-strikes { font-weight: 700; color: #ff8a7a; }
-#hud-objective { color: #9fb0c9; font-size: 13px; }
-.hud-mid { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+#hud-objective { color: #9fb0c9; font-size: 13px; white-space: nowrap; }
+.hud-mid { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+.hud-right { display: flex; align-items: center; gap: 6px; }
 .hud-mid span { white-space: nowrap; }
 #hud-pages { font-weight: 700; color: #ffd76a; }
 #hud-alert { font-weight: 800; letter-spacing: 1px; padding: 2px 8px; border-radius: 20px; }
@@ -28,7 +37,7 @@ body {
 .alert-wary { background: #4a3a10; color: #ffd76a; }
 .alert-hunt { background: #571b1b; color: #ff8a7a; }
 #hud-meter {
-  display: inline-block; width: 80px; height: 10px; border-radius: 6px;
+  display: inline-block; width: 64px; height: 10px; border-radius: 6px;
   background: #1c2536; border: 1px solid #2c3a52; overflow: hidden; vertical-align: middle;
 }
 #hud-meter-fill { display: block; height: 100%; width: 0%; background: #ffd76a; transition: width 120ms linear; }
