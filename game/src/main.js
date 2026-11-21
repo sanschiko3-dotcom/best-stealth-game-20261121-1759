@@ -320,7 +320,7 @@ export function createGame() {
 const game = createGame();
 
 function syncHud() {
-  hudLevel.textContent = 'HEIST ' + (game.levelIndex + 1) + '/3 — ' + game.level.name;
+  hudLevel.textContent = 'HEIST ' + (game.levelIndex + 1) + '/3 \u00b7 ' + game.level.name;
   hudPages.textContent = '📄 ' + game.pagesFound + ' / 3';
   hudScore.textContent = '$' + game.score;
   hudStrikes.textContent = '✖ ' + game.strikes + '/3';
@@ -337,7 +337,7 @@ function syncHud() {
   hudTime.textContent = formatTime(game.time);
   hudObjective.textContent = game.pagesFound === 3
     ? 'All pages stolen — reach the green EXIT!'
-    : 'Steal 3 ledger pages, then reach the exit unseen.';
+    : 'Steal 3 pages \u2192 exit.';
   if (game.state === 'levelclear') {
     document.getElementById('levelclear-stats').textContent =
       game.level.name + ' cleared — score $' + game.score +

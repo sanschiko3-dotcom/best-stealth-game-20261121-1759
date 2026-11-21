@@ -8,23 +8,36 @@ An original top-down stealth game for the [make.fun best stealth game bounty](ht
 
 ## The game
 
-One thief. One archive. Five guards who never blink. Slip through the
-Meridian Archive after dark, steal the **3 ledger pages**, then reach the
-**green exit** without being caught.
+One thief. Three heists. Guards, cameras, and a vault that never sleeps. Slip
+through the Meridian Archive, the Hall of Portraits and the Star Sapphire
+Vault — steal the **3 ledger pages** on each floor, grab the **gold**, then
+reach the **green exit**. Finish a heist without being caught for a
+**+$500 ghost bonus**.
 
-- **5 patrolling guards** (Rook, Bishop, Knight, Queen, Pawn), each with a
-  sweeping **vision cone** that turns yellow → red as suspicion builds
+- **3 heists, 5 → 7 guards** (Rook, Bishop, Knight, Queen, Pawn, Sage,
+  Warden), each with a sweeping **vision cone** that turns yellow → red as
+  suspicion builds — later floors patrol faster and denser
+- **Security cameras** on the Gallery and the Vault: sweeping cones that
+  build an alarm and call the nearest guard to your position when they trip
+- **Coin-toss gadget** (C or right-click, 5 per heist): throw a coin and the
+  nearest guard walks over to investigate — "WHAT WAS THAT?"
 - **Detection with recovery**: get spotted and a guard investigates; break
   line of sight and suspicion fades. Get fully spotted and the guard chases —
-  get touched and the run is over
+  get touched and you lose a **strike** and restart at the door. **3 strikes**
+  end the run
+- **Loot + score**: pages $100, gold coins $25, ghost bonus $500 per clean
+  heist; Ghost–Shadow–Prowler rank at the end
 - **Cover that reads at a glance**: bushes hide you, crates and walls block
-  sight, dark shadow floor halves how fast you are spotted
+  sight, dark shadow floor halves how fast you are spotted, warm lamp pools
+  mark where you are easy to see
 - **Sneak (hold Shift)**: slower, quieter, harder to spot; running loud
   draws nearby guards toward the noise
-- **HUD**: objective, pages found, alert state, detection meter, timer
+- **HUD**: heist name, pages, score, coins, strikes, alert state, detection
+  meter, timer
 - **Synthesised sound**: footsteps (yours and the guards', quieter with
-  distance), alert sting, pickup chime, win/lose motifs — no audio files
-- **Start / pause / win / lose screens** with a Ghost–Shadow–Prowler rank
+  distance), alert sting, coin clink, pickup chime, win/lose motifs — no
+  audio files
+- **Start / pause / heist-complete / win / lose screens**
 
 ## Controls
 
@@ -33,6 +46,7 @@ Meridian Archive after dark, steal the **3 ledger pages**, then reach the
 | WASD / arrow keys | Move |
 | Click a floor tile | Walk there |
 | Hold Shift | Sneak |
+| C / right-click | Toss a coin to distract a guard |
 | P | Pause |
 | R | Restart |
 | M | Mute |
@@ -49,16 +63,19 @@ cd game && python3 -m http.server 8080
 
 Screenshot scenes are staged deterministically from the live game code:
 `index.html?shot=overview|cone|hide|exit`. A scripted self-test runs at
-`index.html?selftest=1` (7 checks: movement, patrol, detection, hiding,
-win, lose, level parsing).
+`index.html?selftest=1` (12 checks: level parsing, movement, patrol,
+detection, hiding, level clear, heist advance, win, strikes, coin distraction,
+camera alarm).
 
 ## Layout
 
 - `main.ts` — the entry program: copies `game/` + `screenshots/` to
   `/output` and writes `dossier.json` with `vendor/makefun-game.ts`
 - `game/index.html`, `game/style.css` — page shell and HUD
-- `game/src/level.js` — the archive floor, collision, line of sight
+- `game/src/level.js` — the three heist floors, collision, line of sight
 - `game/src/guards.js` — patrols, vision cones, suspicion, chase
+- `game/src/cameras.js` — sweeping security cameras and their alarm
+- `game/src/gadgets.js` — the coin-toss distraction gadget
 - `game/src/player.js` — movement, sneak, click-to-walk, hiding
 - `game/src/audio.js` — synthesised WebAudio sound
 - `game/src/render.js` — all canvas drawing
