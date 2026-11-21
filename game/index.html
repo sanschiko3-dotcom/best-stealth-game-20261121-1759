@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shadow Ledger — a stealth game</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="wrap">
+  <div id="hud">
+    <div class="hud-left">
+      <span id="hud-title">SHADOW LEDGER</span>
+      <span id="hud-objective">Find 3 ledger pages, then reach the exit unseen.</span>
+    </div>
+    <div class="hud-mid">
+      <span id="hud-pages" title="Ledger pages found">📄 0 / 3</span>
+      <span id="hud-alert" class="alert-calm">● CALM</span>
+      <span id="hud-meter"><span id="hud-meter-fill"></span></span>
+      <span id="hud-time">00:00</span>
+    </div>
+    <div class="hud-right">
+      <button id="btn-pause" type="button">⏸ Pause</button>
+      <button id="btn-mute" type="button">🔊 Sound</button>
+      <button id="btn-restart" type="button">↻ Restart</button>
+    </div>
+  </div>
+  <div id="stage">
+    <canvas id="game" width="1280" height="800"></canvas>
+    <div id="overlay" class="overlay">
+      <div class="panel" id="panel-start">
+        <h1>SHADOW LEDGER</h1>
+        <p class="tagline">One thief. One archive. Five guards who never blink.</p>
+        <p>Slip through the Meridian Archive after dark. Steal the <b>3 ledger pages</b>,
+        then reach the <b class="exit-word">green exit</b> without being caught.</p>
+        <ul class="controls">
+          <li><b>WASD / Arrow keys</b> — move &nbsp;·&nbsp; <b>click</b> a floor tile to walk there</li>
+          <li><b>Hold Shift</b> — sneak: slower, quieter, harder to spot</li>
+          <li><b>Bushes</b> hide you · <b>crates &amp; walls</b> block a guard's sight</li>
+          <li><b>Shadows</b> (dark floor) halve how fast you are spotted</li>
+          <li><b>P</b> pause · <b>R</b> restart · <b>M</b> mute</li>
+        </ul>
+        <p class="hint">If a guard's cone turns red and the alarm fills, break line of sight and
+        wait — suspicion fades. Get caught and the run is over.</p>
+        <button id="btn-start" type="button">▶ Begin the heist</button>
+      </div>
+      <div class="panel hidden" id="panel-win">
+        <h1 class="win-title">CLEAN GETAWAY</h1>
+        <p id="win-stats">You slipped out with the ledger.</p>
+        <p id="win-rank"></p>
+        <button id="btn-again-win" type="button">↻ Play again</button>
+      </div>
+      <div class="panel hidden" id="panel-lose">
+        <h1 class="lose-title">CAUGHT</h1>
+        <p id="lose-stats">A guard grabbed you in the dark.</p>
+        <button id="btn-again-lose" type="button">↻ Try again</button>
+      </div>
+      <div class="panel hidden" id="panel-pause">
+        <h1>PAUSED</h1>
+        <p>The archive waits. The guards do not.</p>
+        <button id="btn-resume" type="button">▶ Resume</button>
+      </div>
+    </div>
+  </div>
+  <div id="foot">SHADOW LEDGER — an original stealth game · no network, no tracking · WASD/arrows + mouse</div>
+</div>
+<div id="selftest" style="display:none"></div>
+<div id="errors" style="display:none"></div>
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>
