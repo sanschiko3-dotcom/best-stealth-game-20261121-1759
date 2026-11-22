@@ -3,7 +3,7 @@
 // visibility word and the ring under the player both read this.
 import { tileKindAtPx } from './level.js';
 
-const LAMP_GLOW_RADIUS = 120;
+const LAMP_GLOW_RADIUS = 140;
 const LIT_RADIUS = 95;
 
 // Warm lamp pools: light that marks where you are easy to see.
@@ -11,8 +11,8 @@ export function drawLamps(ctx, level, time) {
   for (const lamp of level.lamps) {
     const flicker = 0.85 + Math.sin(time * 2.1 + lamp.x * 0.05) * 0.06;
     const glow = ctx.createRadialGradient(lamp.x, lamp.y, 4, lamp.x, lamp.y, LAMP_GLOW_RADIUS);
-    glow.addColorStop(0, 'rgba(255,196,110,' + (0.3 * flicker) + ')');
-    glow.addColorStop(0.45, 'rgba(255,196,110,' + (0.12 * flicker) + ')');
+    glow.addColorStop(0, 'rgba(255,196,110,' + (0.34 * flicker) + ')');
+    glow.addColorStop(0.45, 'rgba(255,196,110,' + (0.14 * flicker) + ')');
     glow.addColorStop(1, 'rgba(255,196,110,0)');
     ctx.fillStyle = glow;
     ctx.fillRect(lamp.x - LAMP_GLOW_RADIUS, lamp.y - LAMP_GLOW_RADIUS, LAMP_GLOW_RADIUS * 2, LAMP_GLOW_RADIUS * 2);

@@ -38,7 +38,13 @@ export function drawFloor(ctx, palette = DEFAULT_PALETTE) {
       } else {
         ctx.fillStyle = v < 0.5 ? palette.floorA : palette.floorB;
         ctx.fillRect(x, y, TILE, TILE);
-        ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+        // Warm speckle on a few tiles, so the floor reads as stone and
+        // wood rather than flat dark paint.
+        if (v > 0.86) {
+          ctx.fillStyle = 'rgba(255,200,120,0.035)';
+          ctx.fillRect(x, y, TILE, TILE);
+        }
+        ctx.strokeStyle = 'rgba(255,255,255,0.06)';
         ctx.strokeRect(x + 0.5, y + 0.5, TILE - 1, TILE - 1);
       }
       if (t === 'D') {
@@ -287,65 +293,91 @@ export function drawCoinToss(ctx, coin, time) {
 }
 
 export function drawPlayer(ctx, player, time, visibility = 'dim') {
-  // A ring under the thief reads how lit they are: gold in lamplight,
-  // blue in shadow — the lighting that shows what is safe.
-  if (visibility === 'lit') {
-    ctx.strokeStyle = 'rgba(255,215,106,0.55)';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(player.x, player.y, 19, 0, Math.PI * 2);
-    ctx.stroke();
-  } else if (visibility === 'shadow') {
-    ctx.strokeStyle = 'rgba(120,170,255,0.5)';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(player.x, player.y, 19, 0, Math.PI * 2);
-    ctx.stroke();
-  }
+  // The thief must be findable at a glance: a soft glow behind them, a
+  // bright rim, and a YOU tag like the guards' name tags. The ring under
+  // the thief reads how lit they are in every state — gold in lamplight,
+  // blue in shadow, soft white in dim light, green while hidden.
+  const hidden = player.hiddenInBush;
+  const ringColor = hidden ? 'rgba(123,228,149,0.85)'
+    : visibility === 'lit' ? 'rgba(255,215,106,0.7)'
+    : visibility === 'shadow' ? 'rgba(120,170,255,0.65)'
+    : 'rgba(232,238,251,0.4)';
+  const glow = ctx.createRadialGradient(player.x, player.y, 4, player.x, player.y, 38);
+  glow.addColorStop(0, 'rgba(160,220,255,0.20)');
+  glow.addColorStop(1, 'rgba(160,220,255,0)');
+  ctx.fillStyle = glow;
+  ctx.fillRect(player.x - 38, player.y - 38, 76, 76);
+  ctx.strokeStyle = ringColor;
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.arc(player.x, player.y, 24, 0, Math.PI * 2);
+  ctx.stroke();
   // Noise ring while walking loud.
   if (player.moving && !player.sneaking) {
     const phase = (time * 2.4) % 1;
     ctx.strokeStyle = 'rgba(255,255,255,' + (0.22 * (1 - phase)) + ')';
     ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.arc(player.x, player.y, 14 + phase * 34, 0, Math.PI * 2);
+    ctx.arc(player.x, player.y, 18 + phase * 34, 0, Math.PI * 2);
     ctx.stroke();
   }
-  const hidden = player.hiddenInBush;
   ctx.save();
-  ctx.globalAlpha = hidden ? 0.45 : 1;
+  ctx.globalAlpha = hidden ? 0.85 : 1;
   ctx.translate(player.x, player.y);
   ctx.rotate(player.angle);
-  // Hooded cloak: dark teal body, gold trim, face shadow.
+  // Hooded cloak: dark teal body with a lighter hood, gold trim, and a
+  // facing wedge so the direction the thief looks reads at a glance.
   ctx.fillStyle = '#0f3d33';
   ctx.beginPath();
-  ctx.arc(0, 0, 15, 0, Math.PI * 2);
+  ctx.arc(0, 0, 20, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#17604f';
+  ctx.beginPath();
+  ctx.arc(-2, 0, 14, 0, Math.PI * 2);
   ctx.fill();
   ctx.strokeStyle = '#ffd76a';
-  ctx.lineWidth = 2;
+  ctx.lineWidth = 3;
   ctx.beginPath();
-  ctx.arc(0, 0, 15, -1.1, 1.1);
+  ctx.arc(0, 0, 20, -1.1, 1.1);
   ctx.stroke();
-  ctx.fillStyle = '#123b32';
-  ctx.fillRect(8, -7, 9, 14);
+  ctx.fillStyle = '#ffd76a';
+  ctx.beginPath();
+  ctx.moveTo(20, 0);
+  ctx.lineTo(10, -7);
+  ctx.lineTo(10, 7);
+  ctx.closePath();
+  ctx.fill();
+  // Face shadow with two bright eyes.
+  ctx.fillStyle = '#0a1f1a';
+  ctx.beginPath();
+  ctx.arc(7, 0, 8, 0, Math.PI * 2);
+  ctx.fill();
   ctx.fillStyle = '#e8eefb';
   ctx.beginPath();
-  ctx.arc(5, -4, 2, 0, Math.PI * 2);
-  ctx.arc(5, 4, 2, 0, Math.PI * 2);
+  ctx.arc(8, -4, 2.5, 0, Math.PI * 2);
+  ctx.arc(8, 4, 2.5, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
-  if (player.sneaking) {
-    ctx.fillStyle = 'rgba(223,230,242,0.8)';
-    ctx.font = '11px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('sneaking', player.x, player.y + 22);
-  }
-  if (hidden) {
-    ctx.fillStyle = '#7be495';
-    ctx.font = 'bold 11px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('hidden', player.x, player.y - 22);
-  }
+  // Bright rim, drawn at full strength even in a bush: the thief is hidden
+  // from the guards, never from the reader.
+  ctx.strokeStyle = 'rgba(207,238,255,0.95)';
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.arc(player.x, player.y, 21, 0, Math.PI * 2);
+  ctx.stroke();
+  // YOU tag + state, mirroring the guards' name + state tags.
+  const stateWord = hidden ? 'HIDDEN' : player.sneaking ? 'SNEAKING'
+    : visibility === 'lit' ? 'IN LIGHT' : visibility === 'shadow' ? 'IN SHADOW' : 'DIM';
+  const stateColor = hidden ? '#7be495' : visibility === 'lit' ? '#ffd76a'
+    : visibility === 'shadow' ? '#8fb8ff' : 'rgba(159,176,201,0.95)';
+  ctx.fillStyle = 'rgba(232,238,251,0.95)';
+  ctx.font = 'bold 12px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  ctx.fillText('YOU', player.x, player.y + 27);
+  ctx.fillStyle = stateColor;
+  ctx.font = '10px sans-serif';
+  ctx.fillText(stateWord, player.x, player.y + 41);
 }
 
 // The smoke pellet: a small pellet in flight, then a grey-blue cloud no

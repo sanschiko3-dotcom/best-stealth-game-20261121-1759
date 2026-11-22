@@ -14,6 +14,22 @@ Vault — steal the **3 ledger pages** on each floor, grab the **gold**, then
 reach the **green exit**. Finish a heist without being caught for a
 **+$500 ghost bonus**.
 
+### v4 — the thief you can find
+
+- **A thief you can find at a glance**: bigger hooded figure with a bright
+  rim, a facing wedge, a glow and a visibility ring in every light
+  (gold / blue / soft white / green while hidden) — plus a `YOU` tag with
+  a state line, mirroring the guards' name tags. Hidden in a bush the
+  thief keeps the rim and the tag: hidden from the guards, never from you
+- **Staged shots put the player in the frame**: the cover thief watches
+  the coin pull Bishop away; the smoke shot shows the thief clear of the
+  cloud; the hide shot keeps the thief visible in the grass; the exit
+  shot stands the thief one step from freedom
+- **Legend only on the cover**: the small screenshots show pure gameplay —
+  patrol routes and callouts stay, the FIELD NOTES card does not
+- **Warmer floors**: stronger lamp pools, a brighter tile grid, warm
+  speckle on the stone — the Archive no longer reads as empty dark floor
+
 ### v3 — built to be read at a glance
 
 - **Vision cones clipped by walls and crates**: every cone is a fan of rays

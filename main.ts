@@ -4,10 +4,14 @@
 // /output/dossier.json with the vendored make.fun library, exactly as the
 // kit's starter does. It never touches the network and writes the same
 // bytes on every run, so the grader's two runs agree.
+// v4: the thief is drawn big and tagged YOU, the staged shots put the
+// player in the frame, and only the cover carries the legend card.
 import { cpSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildDossier } from './vendor/makefun-game.ts';
+
+const VERSION = 'v4';
 
 const here = fileURLToPath(new URL('.', import.meta.url));
 const out = process.env.MAKEFUN_OUTPUT_DIR ?? '/output';
@@ -30,4 +34,4 @@ const dossier = buildDossier(out, {
   game_path_max_bytes: 1000,
 });
 writeFileSync(join(out, 'dossier.json'), dossier);
-console.log('shadow-ledger: wrote ' + out + ' (dossier ' + dossier.length + ' bytes)');
+console.log('shadow-ledger ' + VERSION + ': wrote ' + out + ' (dossier ' + dossier.length + ' bytes)');

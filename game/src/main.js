@@ -75,6 +75,7 @@ export function createGame() {
     smoke: new SmokePellet(),
     smokeCount: SMOKE_PER_LEVEL,
     fieldNotes: false, // H toggles the legend, patrol routes and callouts
+    legend: true, // the FIELD NOTES card itself; staged shots may hide it
     callouts: [], // staged-scene annotations {x, y, tx, ty, text}
     particles: [],
     state: 'menu', // menu | playing | paused | levelclear | won | lost
@@ -102,6 +103,7 @@ export function createGame() {
       this.smoke = new SmokePellet();
       this.smokeCount = SMOKE_PER_LEVEL;
       this.fieldNotes = false;
+      this.legend = true;
       this.callouts = [];
       this.particles.length = 0;
       this.pagesFound = 0;
@@ -345,7 +347,7 @@ export function createGame() {
       drawPlayer(ctx, this.player, this.time, visibilityAt(this.level, this.player.x, this.player.y));
       drawParticles(ctx, this.particles);
       if (this.fieldNotes) {
-        drawFieldNotes(ctx);
+        if (this.legend) drawFieldNotes(ctx);
         drawCallouts(ctx, this.callouts);
       }
       drawVignette(ctx);
@@ -427,6 +429,7 @@ window.addEventListener('keydown', (e) => {
   else if (e.code === 'KeyH') {
     // Field notes: the legend, patrol routes and callouts.
     game.fieldNotes = !game.fieldNotes;
+    game.legend = game.fieldNotes;
   } else if (e.code === 'KeyQ') {
     // Throw a smoke pellet ahead of you: cones cannot see through smoke.
     game.throwSmokeAt(
@@ -683,6 +686,15 @@ function runSelfTest() {
     g.reset();
     if (!stageShot(g, 'overview')) return false;
     return g.fieldNotes === true && g.callouts.length >= 3;
+  });
+  check('only the cover carries the legend card; other shots hide it', () => {
+    const g = createGame();
+    g.reset();
+    if (!stageShot(g, 'overview') || g.legend !== true) return false;
+    if (!stageShot(g, 'cone') || g.legend !== false) return false;
+    if (!stageShot(g, 'hide') || g.legend !== false) return false;
+    if (!stageShot(g, 'exit') || g.legend !== false) return false;
+    return g.fieldNotes === true; // patrol routes stay on in every shot
   });
   const passed = results.filter((r) => r.pass).length;
   const el = document.getElementById('selftest');
